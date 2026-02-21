@@ -4,14 +4,21 @@ export const BELT_LENGTH = 40
 export const TICK_MS = 500
 export const RESOURCE_COUNT = 5  // fixed 5 ore patches, slots 0-4
 
+/** Base processing ticks per building type (before randomization). */
 export const PROCESSING_TICKS: Record<BuildingType, number> = {
-  miner: 2,
-  furnace: 4,
-  assembler_gear: 3,
-  assembler_wire: 3,
-  assembler_science: 3,
-  lab: 5,
+  miner: 6,
+  furnace: 6,
+  assembler_gear: 4,
+  assembler_wire: 4,
+  assembler_science: 5,
+  lab: 6,
 }
+
+/**
+ * Jitter fraction applied each cycle: actual cycleTime = base * U(1-JITTER, 1+JITTER).
+ * E.g. 0.35 means ±35% variation around the base time.
+ */
+export const PROCESSING_JITTER = 0.35
 
 export const RECIPES: Record<BuildingType, { inputs: Partial<Record<Item, number>>; output: Item | null }> = {
   miner: { inputs: {}, output: null },

@@ -1,4 +1,4 @@
-import { BUILDING_EMOJI, PROCESSING_TICKS } from '../game/constants'
+import { BUILDING_EMOJI } from '../game/constants'
 import type { Building } from '../game/types'
 
 interface Props {
@@ -22,8 +22,7 @@ function isActive(building: Building): boolean {
 export function BuildingIcon({ building, onRemove }: Props) {
   const stalled = isStalled(building)
   const active = isActive(building)
-  const maxTicks = PROCESSING_TICKS[building.type]
-  const pct = maxTicks > 0 ? Math.min(building.progress / maxTicks, 1) : 0
+  const pct = building.cycleTime > 0 ? Math.min(building.progress / building.cycleTime, 1) : 0
   const size = 44
 
   return (

@@ -30,6 +30,7 @@ export interface Building {
   side: Side
   slotIndex: number
   progress: number
+  cycleTime: number       // randomized each cycle; ticks to complete one production run
   heldItems: Partial<Record<Item, number>>
   totalProduced: number
 }

@@ -6,7 +6,7 @@
 
 ## Overview
 
-A deterministic, tick-based factory automation game running entirely in the browser. No server. No external services. All game state lives in a Zustand store, persisted to `localStorage`. The simulation is a pure function: `tick(state) → state`.
+A **stochastic**, tick-based factory automation game running entirely in the browser. No server. No external services. All game state lives in a Zustand store, persisted to `localStorage`. The simulation is a pure function: `tick(state) → state`. Each building has a randomized cycle time that re-rolls every production run, making ratios non-deterministic and encouraging adaptive play.
 
 ---
 
@@ -17,7 +17,7 @@ A deterministic, tick-based factory automation game running entirely in the brow
 - **Interval:** `TICK_MS / speed` milliseconds (default 500ms)
 - **Speed multipliers:** 0.5×, 1×, 2×, 4×
 - **Persistence:** state saved to localStorage every 5 ticks
-- **Save versioning:** `SAVE_VERSION = 4` — mismatched saves are silently discarded and a fresh game starts
+- **Save versioning:** `SAVE_VERSION = 5` — mismatched saves are silently discarded and a fresh game starts
 
 ### tick() Function (engine.ts)
 
@@ -37,6 +37,23 @@ pullFromEitherLane(up, down, slot, wanted[]) → Item | null
 ```
 
 Checks UP lane first, then DOWN. If a wanted item is at `slot` in either lane, removes it and returns it. Miners are the only exception — they never pull from the belt.
+
+### Randomized Cycle Times
+
+Each building stores a `cycleTime` field (integer ticks) that replaces the static `PROCESSING_TICKS` constant at runtime.
+
+```
+rollCycleTime(type) → integer
+  base = PROCESSING_TICKS[type]
+  lo   = base * (1 - PROCESSING_JITTER)   // PROCESSING_JITTER = 0.35
+  hi   = base * (1 + PROCESSING_JITTER)
+  return max(1, round(lo + random() * (hi - lo)))
+```
+
+- `cycleTime` is initialized to `PROCESSING_TICKS[type]` on placement (first cycle uses the base value)
+- Re-rolled at the **start** of each new production cycle (after outputting the finished item, or when grabbing a new input)
+- Affects progress bar rendering — the bar fills `progress / cycleTime`
+- Makes it impossible to compute a perfectly balanced ratio; players must overprovision and observe
 
 ---
 
@@ -107,14 +124,16 @@ All buildings follow a priority order within their tick: **output first, then pr
 
 ## Processing Times
 
-| Building | Ticks | Time at 1× |
-|---|---|---|
-| Miner | 2 | 1.0s |
-| Furnace | 4 | 2.0s |
-| Gear Assembler | 3 | 1.5s |
-| Wire Assembler | 3 | 1.5s |
-| Science Assembler | 3 | 1.5s |
-| Lab | 5 | 2.5s |
+Base values (actual cycleTime varies ±35% each cycle):
+
+| Building | Base Ticks | Range (ticks) | Base Time at 1× | Range at 1× |
+|---|---|---|---|---|
+| Miner | 6 | 4–8 | 3.0s | 2.0–4.0s |
+| Furnace | 6 | 4–8 | 3.0s | 2.0–4.0s |
+| Gear Assembler | 4 | 3–5 | 2.0s | 1.5–2.5s |
+| Wire Assembler | 4 | 3–5 | 2.0s | 1.5–2.5s |
+| Science Assembler | 5 | 3–7 | 2.5s | 1.5–3.5s |
+| Lab | 6 | 4–8 | 3.0s | 2.0–4.0s |
 
 ---
 
@@ -145,6 +164,16 @@ SPM = (sum(recent) / coveredSeconds) * 60
 
 ---
 
+## Building Placement
+
+Two methods to place buildings:
+1. **Drag & drop** — drag from sidebar palette, drop onto any empty slot
+2. **Click to place** — click any empty slot to open a modal picker showing all 6 building types with descriptions; Miner is disabled if the slot has no ore patch
+
+Both methods call `placeBuilding()` in the store, which initializes `cycleTime = PROCESSING_TICKS[type]` for the first cycle.
+
+---
+
 ## State Shape (GameState)
 
 ```typescript
@@ -171,6 +200,7 @@ interface Building {
   side:         'left' | 'right'
   slotIndex:    number      // 0–39
   progress:     number
+  cycleTime:    number      // randomized each cycle; ticks to complete one production run
   heldItems:    Partial<Record<Item, number>>
   totalProduced: number
 }
@@ -221,7 +251,7 @@ Item     = 'iron_ore' | 'copper_ore' | 'iron_plate' | 'copper_plate'
 |---|---|
 | Storage key | `factory-automation-save` |
 | Format | JSON |
-| Save version | 4 |
+| Save version | 5 |
 | Save frequency | Every 5 ticks |
 | Validation | Version match, belt array lengths, array types, stat fields |
 | On mismatch | Silent discard → fresh game |
@@ -232,9 +262,10 @@ Item     = 'iron_ore' | 'copper_ore' | 'iron_plate' | 'copper_plate'
 ## Constants (constants.ts)
 
 ```typescript
-BELT_LENGTH    = 40
-TICK_MS        = 500
-RESOURCE_COUNT = 5
+BELT_LENGTH        = 40
+TICK_MS            = 500
+RESOURCE_COUNT     = 5
+PROCESSING_JITTER  = 0.35   // ±35% variation on all cycle times
 ```
 
 ---

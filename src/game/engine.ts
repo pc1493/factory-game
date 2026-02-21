@@ -1,5 +1,5 @@
-import { PROCESSING_TICKS } from './constants'
-import type { Building, GameState, Item } from './types'
+import { PROCESSING_JITTER, PROCESSING_TICKS } from './constants'
+import type { Building, BuildingType, GameState, Item } from './types'
 
 function advanceLane(lane: (Item | null)[]): { lane: (Item | null)[], lost: boolean } {
   const next = [...lane]
@@ -13,8 +13,7 @@ function advanceLane(lane: (Item | null)[]): { lane: (Item | null)[], lost: bool
 
 /**
  * Try to pull one of the wanted items from either belt lane at the given slot.
- * Removes the item from whichever lane has it first (up checked first).
- * Returns the item pulled, or null if neither lane has a wanted item there.
+ * Checks UP lane first, then DOWN. Returns the item pulled, or null.
  */
 function pullFromEitherLane(
   up: (Item | null)[],
@@ -30,6 +29,17 @@ function pullFromEitherLane(
     }
   }
   return null
+}
+
+/**
+ * Roll a new randomized cycle time for a building type.
+ * Result is an integer in [base*(1-JITTER), base*(1+JITTER)], minimum 1.
+ */
+function rollCycleTime(type: BuildingType): number {
+  const base = PROCESSING_TICKS[type]
+  const lo = base * (1 - PROCESSING_JITTER)
+  const hi = base * (1 + PROCESSING_JITTER)
+  return Math.max(1, Math.round(lo + Math.random() * (hi - lo)))
 }
 
 export function tick(state: GameState): GameState {
@@ -72,44 +82,42 @@ export function tick(state: GameState): GameState {
   for (const _b of sorted) {
     const b = byId.get(_b.id)!
     const slot = b.slotIndex
-    // Each building outputs only to its own lane
     const outLane = b.side === 'left' ? up : down
 
     switch (b.type) {
       case 'miner': {
-        // Miners produce from the ground — no belt input, output to own lane only
         const resource = resources.find((r) => r.slotIndex === slot)
         if (!resource) break
         b.progress++
-        if (b.progress >= PROCESSING_TICKS.miner) {
+        if (b.progress >= b.cycleTime) {
           if (outLane[slot] === null) {
             outLane[slot] = resource.type
             b.progress = 0
+            b.cycleTime = rollCycleTime('miner')
             b.totalProduced++
             stats.produced[resource.type]++
           } else {
-            b.progress = PROCESSING_TICKS.miner  // stall
+            b.progress = b.cycleTime  // stall
           }
         }
         break
       }
 
       case 'furnace': {
-        // Output ready plate — try to place on own lane
         if (b.heldItems['iron_plate'] || b.heldItems['copper_plate']) {
           const outItem: Item = b.heldItems['iron_plate'] ? 'iron_plate' : 'copper_plate'
           if (outLane[slot] === null) {
             outLane[slot] = outItem
             delete b.heldItems[outItem]
+            b.cycleTime = rollCycleTime('furnace')
             b.totalProduced++
             stats.produced[outItem]++
           }
           break
         }
-        // Processing ore already in hand
         if (b.heldItems['iron_ore'] || b.heldItems['copper_ore']) {
           b.progress++
-          if (b.progress >= PROCESSING_TICKS.furnace) {
+          if (b.progress >= b.cycleTime) {
             const ore: Item = b.heldItems['iron_ore'] ? 'iron_ore' : 'copper_ore'
             const plate: Item = ore === 'iron_ore' ? 'iron_plate' : 'copper_plate'
             delete b.heldItems[ore]
@@ -118,96 +126,92 @@ export function tick(state: GameState): GameState {
           }
           break
         }
-        // Try to grab ore from either lane
         const grabbed = pullFromEitherLane(up, down, slot, ['iron_ore', 'copper_ore'])
         if (grabbed !== null) {
           b.heldItems[grabbed] = 1
           b.progress = 0
+          b.cycleTime = rollCycleTime('furnace')
         }
         break
       }
 
       case 'assembler_gear': {
-        // Output ready gear
         if (b.heldItems['gear']) {
           if (outLane[slot] === null) {
             outLane[slot] = 'gear'
             delete b.heldItems['gear']
+            b.cycleTime = rollCycleTime('assembler_gear')
             b.totalProduced++
             stats.produced['gear']++
           }
           break
         }
-        // Processing iron plate already in hand
         if (b.heldItems['iron_plate']) {
           b.progress++
-          if (b.progress >= PROCESSING_TICKS.assembler_gear) {
+          if (b.progress >= b.cycleTime) {
             delete b.heldItems['iron_plate']
             b.heldItems['gear'] = 1
             b.progress = 0
           }
           break
         }
-        // Try to grab iron plate from either lane
         const grabbed = pullFromEitherLane(up, down, slot, ['iron_plate'])
         if (grabbed !== null) {
           b.heldItems['iron_plate'] = 1
           b.progress = 0
+          b.cycleTime = rollCycleTime('assembler_gear')
         }
         break
       }
 
       case 'assembler_wire': {
-        // Output ready wire
         if (b.heldItems['wire']) {
           if (outLane[slot] === null) {
             outLane[slot] = 'wire'
             delete b.heldItems['wire']
+            b.cycleTime = rollCycleTime('assembler_wire')
             b.totalProduced++
             stats.produced['wire']++
           }
           break
         }
-        // Processing copper plate already in hand
         if (b.heldItems['copper_plate']) {
           b.progress++
-          if (b.progress >= PROCESSING_TICKS.assembler_wire) {
+          if (b.progress >= b.cycleTime) {
             delete b.heldItems['copper_plate']
             b.heldItems['wire'] = 1
             b.progress = 0
           }
           break
         }
-        // Try to grab copper plate from either lane
         const grabbed = pullFromEitherLane(up, down, slot, ['copper_plate'])
         if (grabbed !== null) {
           b.heldItems['copper_plate'] = 1
           b.progress = 0
+          b.cycleTime = rollCycleTime('assembler_wire')
         }
         break
       }
 
       case 'assembler_science': {
-        // Output ready science pack
         if (b.heldItems['science']) {
           if (outLane[slot] === null) {
             outLane[slot] = 'science'
             delete b.heldItems['science']
+            b.cycleTime = rollCycleTime('assembler_science')
             b.totalProduced++
             stats.produced['science']++
           }
           break
         }
-        // Currently crafting
         if (b.progress > 0) {
           b.progress++
-          if (b.progress >= PROCESSING_TICKS.assembler_science) {
+          if (b.progress >= b.cycleTime) {
             b.heldItems['science'] = 1
             b.progress = 0
           }
           break
         }
-        // Try to collect gear and wire (one per tick, from either lane)
         if (!b.heldItems['gear']) {
           const g = pullFromEitherLane(up, down, slot, ['gear'])
           if (g !== null) b.heldItems['gear'] = 1
@@ -215,30 +219,30 @@ export function tick(state: GameState): GameState {
           const w = pullFromEitherLane(up, down, slot, ['wire'])
           if (w !== null) b.heldItems['wire'] = 1
         }
-        // Start crafting when both inputs are ready
         if (b.heldItems['gear'] && b.heldItems['wire']) {
           delete b.heldItems['gear']
           delete b.heldItems['wire']
+          b.cycleTime = rollCycleTime('assembler_science')
           b.progress = 1
         }
         break
       }
 
       case 'lab': {
-        // Currently processing a science pack
         if (b.progress > 0) {
           b.progress++
-          if (b.progress >= PROCESSING_TICKS.lab) {
+          if (b.progress >= b.cycleTime) {
             b.progress = 0
+            b.cycleTime = rollCycleTime('lab')
             b.totalProduced++
             scienceThisTick++
           }
           break
         }
-        // Try to grab science from either lane
         const grabbed = pullFromEitherLane(up, down, slot, ['science'])
         if (grabbed !== null) {
           b.heldItems['science'] = 1
+          b.cycleTime = rollCycleTime('lab')
           b.progress = 1
         }
         break

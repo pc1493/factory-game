@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { tick as engineTick } from './engine'
-import { TICK_MS } from './constants'
+import { PROCESSING_TICKS, TICK_MS } from './constants'
 import { generateResources, makeInitialBelts, makeInitialStats } from './utils'
 import type { Building, GameState, Side } from './types'
 
@@ -10,7 +10,7 @@ interface GameStore extends GameState {
   resumeGame: () => void
   resetGame: () => void
   setSpeed: (speed: number) => void
-  placeBuilding: (building: Omit<Building, 'id' | 'progress' | 'heldItems' | 'totalProduced'>) => void
+  placeBuilding: (building: Omit<Building, 'id' | 'progress' | 'cycleTime' | 'heldItems' | 'totalProduced'>) => void
   removeBuilding: (id: string) => void
   moveBuilding: (id: string, newSlotIndex: number, newSide: Side) => void
   tick: () => void
@@ -18,7 +18,7 @@ interface GameStore extends GameState {
 
 let intervalId: ReturnType<typeof setInterval> | null = null
 
-const SAVE_VERSION = 4
+const SAVE_VERSION = 5
 
 function saveToStorage(state: GameState) {
   try {
@@ -127,6 +127,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       ...building,
       id: crypto.randomUUID(),
       progress: 0,
+      cycleTime: PROCESSING_TICKS[building.type],
       heldItems: {},
       totalProduced: 0,
     }
