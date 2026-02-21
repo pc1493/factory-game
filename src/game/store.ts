@@ -29,7 +29,7 @@ interface GameStore extends GameState {
 
 let intervalId: ReturnType<typeof setInterval> | null = null
 
-const SAVE_VERSION = 5
+const SAVE_VERSION = 6
 
 function saveToStorage(state: GameState) {
   try {
@@ -59,7 +59,14 @@ function loadFromStorage(): GameState | null {
     if (!Array.isArray(p.stats?.history)) return null
     return {
       belts: { up: p.belts.up, down: p.belts.down },
-      buildings: p.buildings,
+      // Backfill cycleTime for any building that was saved before the field existed
+      buildings: p.buildings.map((b: Building) => ({
+        ...b,
+        cycleTime: typeof b.cycleTime === 'number' ? b.cycleTime : PROCESSING_TICKS[b.type as BuildingType] ?? 4,
+        heldItems: b.heldItems ?? {},
+        totalProduced: b.totalProduced ?? 0,
+        progress: b.progress ?? 0,
+      })),
       resources: p.resources,
       ticks: p.ticks ?? 0,
       stats: {

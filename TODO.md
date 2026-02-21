@@ -10,6 +10,7 @@
 
 - [ ] **Playtest the full production chain** — iron_ore → iron_plate → gear; copper_ore → copper_plate → wire → science → lab
 - [x] **Verify cross-lane pulling works** — buildings consume from either belt lane
+- [x] **Fix recurring blank screen** — root cause: saved buildings missing `cycleTime` field after schema change. Now backfilled on load + save version bumped to 6
 - [ ] **Fix any stall/deadlock bugs** — identify cases where belt gets congested and nothing moves
 - [x] **Balance processing tick times** — slowed miner (6 ticks base), added ±35% jitter to all buildings
 - [ ] **Tune belt speed** — 40 slots at 1 item/tick: does it feel right at 1× speed?
@@ -28,6 +29,7 @@
 *Planned additions to deepen the game loop.*
 
 - [x] **Click-to-place building picker** — click any empty slot to open building chooser modal (in addition to drag-drop)
+- [x] **In-game Quick Guide** — collapsible panel below the belt; shows production chain, building descriptions, belt rules, placement tips, strategy hints
 - [ ] **Item tooltips** — hover over a belt item to see what it is (text label, not just emoji)
 - [ ] **Building throughput display** — show items/minute on each building card
 - [ ] **Bottleneck highlighting** — visually flag stalled buildings so player can diagnose congestion

@@ -17,7 +17,7 @@ A **stochastic**, tick-based factory automation game running entirely in the bro
 - **Interval:** `TICK_MS / speed` milliseconds (default 500ms)
 - **Speed multipliers:** 0.5×, 1×, 2×, 4×
 - **Persistence:** state saved to localStorage every 5 ticks
-- **Save versioning:** `SAVE_VERSION = 5` — mismatched saves are silently discarded and a fresh game starts
+- **Save versioning:** `SAVE_VERSION = 6` — mismatched saves are silently discarded and a fresh game starts
 
 ### tick() Function (engine.ts)
 
@@ -171,7 +171,7 @@ Two methods to place buildings:
 1. **Drag & drop** — drag from sidebar palette, drop onto any empty slot
 2. **Click to place** — click any empty slot to open a modal picker showing all 6 building types with descriptions; Miner is disabled if the slot has no ore patch
 
-Both methods call `placeBuilding()` in the store, which initializes `cycleTime = PROCESSING_TICKS[type]` for the first cycle.
+Both methods call `placeBuilding()` in the store, which rolls a randomized `cycleTime` for the new machine.
 
 ---
 
@@ -252,9 +252,9 @@ Item     = 'iron_ore' | 'copper_ore' | 'iron_plate' | 'copper_plate'
 |---|---|
 | Storage key | `factory-automation-save` |
 | Format | JSON |
-| Save version | 5 |
+| Save version | 6 |
 | Save frequency | Every 5 ticks |
-| Validation | Version match, belt array lengths, array types, stat fields |
+| Validation | Version match, belt array lengths, array types, stat fields; building fields backfilled defensively |
 | On mismatch | Silent discard → fresh game |
 | On crash | ErrorBoundary auto-removes save before showing error UI |
 

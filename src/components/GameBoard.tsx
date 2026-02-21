@@ -5,6 +5,7 @@ import { useGameStore } from '../game/store'
 import type { BuildingType, Side } from '../game/types'
 import { Belt } from './Belt'
 import { BuildingPalette } from './BuildingPalette'
+import { QuickGuide } from './QuickGuide'
 import { StatsPanel } from './StatsPanel'
 
 export function GameBoard() {
@@ -123,17 +124,15 @@ export function GameBoard() {
               <Belt />
             </div>
 
-            {/* Legend */}
-            <div className="text-[11px] text-white/25 flex flex-wrap gap-x-5 gap-y-1.5">
-              <span><strong className="text-white/40">⛏️ Miner</strong> — place on ore tile only</span>
-              <span><strong className="text-white/40">🔥 Furnace</strong> — ore → plate</span>
-              <span><strong className="text-white/40">⚙️ Gear Asm.</strong> — iron plate → gear</span>
-              <span><strong className="text-white/40">🔌 Wire Asm.</strong> — copper plate → wire</span>
-              <span><strong className="text-white/40">🔬 Sci. Asm.</strong> — gear + wire → science</span>
-              <span><strong className="text-white/40">🧪 Lab</strong> — consumes science (counts SPM)</span>
-              <span className="text-yellow-500/40"><strong>⚠️</strong> = stalled (belt slot full)</span>
-              <span className="text-white/20">Colored slots = ore deposits</span>
+            {/* Legend (compact) */}
+            <div className="text-[11px] text-white/25 flex flex-wrap gap-x-5 gap-y-1">
+              <span className="text-yellow-500/40"><strong>⚠️</strong> red pulse = stalled (belt full)</span>
+              <span>Colored slots = ore patches (miners only)</span>
+              <span>🎲 each machine gets a random speed on placement</span>
             </div>
+
+            {/* Quick Guide */}
+            <QuickGuide />
           </main>
         </div>
       </div>
