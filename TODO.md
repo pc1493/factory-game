@@ -82,7 +82,7 @@
 ## Design Notes & Ideas
 *Rough thoughts for future consideration.*
 
-- **Randomness rationale:** ±35% jitter on all buildings means you can't precisely compute a perfect ratio — you have to overprovision, manage buffers, and watch the belt. Miners are the biggest bottleneck at base 6 ticks (3s/ore at 1×).
+- **Randomness rationale:** ±35% jitter rolled once at placement means each machine has a fixed "personality" — a slow furnace is always slow until you move it. You can't compute a perfect ratio, but you can learn your specific factory's quirks. Moving a building re-rolls its speed and drops held items, so relocation is a meaningful decision.
 - **Ratio design target:** With randomness, the "feel" should be: place a few miners, see what's short, add a building, repeat. Never fully optimal.
 - **Interesting ratio tensions:**
   - Furnaces are slower than miners by default (6 ticks each, but miner is supply-limited by ore count)
@@ -114,6 +114,7 @@
 - [x] Stats panel (lifetime produced, lost to space, ticks)
 - [x] Belt extended from 20 to 40 slots
 - [x] Resources fixed at 5 ore patches (slots 0–4)
-- [x] Randomized cycleTime per building — ±35% jitter, re-rolled each production cycle
+- [x] Randomized cycleTime per building — ±35% jitter, rolled once on placement/move (fixed per slot)
+- [x] Moving a building re-rolls its cycleTime and resets progress/heldItems
 - [x] Miner slowed to base 6 ticks (was 2) to prevent belt overflow
 - [x] README.md, SPECS.md, TODO.md written

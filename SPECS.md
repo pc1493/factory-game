@@ -40,7 +40,7 @@ Checks UP lane first, then DOWN. If a wanted item is at `slot` in either lane, r
 
 ### Randomized Cycle Times
 
-Each building stores a `cycleTime` field (integer ticks) that replaces the static `PROCESSING_TICKS` constant at runtime.
+Each building stores a `cycleTime` field (integer ticks) that is fixed for the lifetime of its placement.
 
 ```
 rollCycleTime(type) → integer
@@ -50,10 +50,11 @@ rollCycleTime(type) → integer
   return max(1, round(lo + random() * (hi - lo)))
 ```
 
-- `cycleTime` is initialized to `PROCESSING_TICKS[type]` on placement (first cycle uses the base value)
-- Re-rolled at the **start** of each new production cycle (after outputting the finished item, or when grabbing a new input)
+- Rolled **once** when a building is placed or moved — never changes while it sits in a slot
+- Moving a building re-rolls its cycleTime (and resets progress/heldItems)
+- Each machine has a fixed "personality" — a slow furnace stays slow until relocated
 - Affects progress bar rendering — the bar fills `progress / cycleTime`
-- Makes it impossible to compute a perfectly balanced ratio; players must overprovision and observe
+- Makes it impossible to compute a perfectly balanced ratio; players must observe and adapt
 
 ---
 

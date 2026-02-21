@@ -1,8 +1,19 @@
 import { create } from 'zustand'
 import { tick as engineTick } from './engine'
-import { PROCESSING_TICKS, TICK_MS } from './constants'
+import { PROCESSING_JITTER, PROCESSING_TICKS, TICK_MS } from './constants'
 import { generateResources, makeInitialBelts, makeInitialStats } from './utils'
-import type { Building, GameState, Side } from './types'
+import type { Building, BuildingType, GameState, Side } from './types'
+
+/**
+ * Roll a fixed cycle time for a building on placement or move.
+ * Each machine has a unique speed — re-rolled only when placed/moved, not each cycle.
+ */
+function rollCycleTime(type: BuildingType): number {
+  const base = PROCESSING_TICKS[type]
+  const lo = base * (1 - PROCESSING_JITTER)
+  const hi = base * (1 + PROCESSING_JITTER)
+  return Math.max(1, Math.round(lo + Math.random() * (hi - lo)))
+}
 
 interface GameStore extends GameState {
   startGame: () => void
@@ -127,7 +138,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       ...building,
       id: crypto.randomUUID(),
       progress: 0,
-      cycleTime: PROCESSING_TICKS[building.type],
+      cycleTime: rollCycleTime(building.type),  // fixed speed assigned at placement
       heldItems: {},
       totalProduced: 0,
     }
@@ -141,7 +152,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
   moveBuilding: (id, newSlotIndex, newSide) => {
     set((s) => ({
       buildings: s.buildings.map((b) =>
-        b.id === id ? { ...b, slotIndex: newSlotIndex, side: newSide } : b
+        b.id === id
+          ? { ...b, slotIndex: newSlotIndex, side: newSide, cycleTime: rollCycleTime(b.type), progress: 0, heldItems: {} }
+          : b
       ),
     }))
   },
