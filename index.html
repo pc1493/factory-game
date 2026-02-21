@@ -4,9 +4,42 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>factorio-lite</title>
+    <title>Factory Game</title>
+    <style>
+      #pre-react-error {
+        display: none;
+        position: fixed; inset: 0;
+        background: #030712;
+        color: #fff;
+        font-family: monospace;
+        font-size: 13px;
+        padding: 2rem;
+        z-index: 9999;
+        white-space: pre-wrap;
+      }
+    </style>
+    <script>
+      // Catch any crash that happens before React mounts (module load errors, etc.)
+      window.onerror = function(msg, src, line, col, err) {
+        try { localStorage.removeItem('factory-automation-save') } catch(_) {}
+        var el = document.getElementById('pre-react-error')
+        if (el) {
+          el.style.display = 'block'
+          el.textContent = '💥 Fatal error (before React mounted)\n\n' + msg + '\n' + src + ':' + line + '\n\nSave cleared. Reload to try again.'
+        }
+      }
+      window.onunhandledrejection = function(e) {
+        try { localStorage.removeItem('factory-automation-save') } catch(_) {}
+        var el = document.getElementById('pre-react-error')
+        if (el) {
+          el.style.display = 'block'
+          el.textContent = '💥 Unhandled promise rejection\n\n' + (e.reason?.message || e.reason) + '\n\nSave cleared. Reload to try again.'
+        }
+      }
+    </script>
   </head>
   <body>
+    <div id="pre-react-error"></div>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
